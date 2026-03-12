@@ -37,3 +37,4 @@ const iniciarDownloadComSaldo = async () => {
     } catch(e) { alert("Erro ao conectar com servidor.") }
     setLoading(false)
   }
+export default App;
