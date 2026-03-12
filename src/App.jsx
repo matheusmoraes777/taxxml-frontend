@@ -137,7 +137,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
           <div className="flex justify-center mb-4">
-            <img src="/logo.jpeg" alt="Tax XML Logo" className="w-32 object-contain" onError={(e) => { e.target.style.display='none' }} />
+            <img src="/taxxml_logo.jpeg" alt="Tax XML Logo" className="w-32 object-contain" onError={(e) => { e.target.style.display='none' }} />
           </div>
           <h2 className="text-2xl font-black text-center text-slate-800 mb-1">Tax XML</h2>
           <p className="text-sky-500 text-center mb-8 font-bold">Seu XML em Minutos</p>
@@ -163,7 +163,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
            <div className="flex justify-center mb-4">
-            <img src="/logo.jpeg" alt="Tax XML Logo" className="w-24 object-contain" onError={(e) => { e.target.style.display='none' }}/>
+            <img src="/taxxml_logo.jpeg" alt="Tax XML Logo" className="w-24 object-contain" onError={(e) => { e.target.style.display='none' }}/>
           </div>
           <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Criar Conta</h2>
           <p className="text-slate-500 text-center mb-8">Junte-se ao Tax XML</p>
@@ -189,7 +189,7 @@ function App() {
         <div className="max-w-6xl mx-auto">
           <header className="flex justify-between items-center mb-10 bg-white p-6 rounded-2xl shadow-sm border">
             <h1 className="text-2xl font-black flex items-center gap-3 text-slate-800">
-              <img src="/logo.jpeg" alt="Tax XML Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display='none' }}/> 
+              <img src="/taxxml_logo.jpeg" alt="Tax XML Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display='none' }}/> 
               Tax XML
             </h1>
             <button onClick={() => setView('login')} className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold flex items-center gap-2"><LogOut className="w-4 h-4"/> Sair</button>
