@@ -35,7 +35,7 @@ function App() {
 
   const validKeys = keys.split('\n').map(k => k.trim()).filter(k => k.length === 44)
   const total = validKeys.length
-  const totalPrice = (total * 0.15).toFixed(2)
+  const totalPrice = (total * 0.08).toFixed(2)
   const MAX_CHAVES = 5000 
 
   useEffect(() => {
