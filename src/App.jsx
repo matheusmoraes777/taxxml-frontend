@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react'
-import { FileText, CreditCard, QrCode, Download, Loader2, Users, BarChart3, ShieldCheck, LogOut, ArrowRight, CheckCircle, FileArchive, RefreshCw } from 'lucide-react'
+import { FileText, CreditCard, QrCode, Download, Loader2, Users, BarChart3, ShieldCheck, LogOut, ArrowRight, UserPlus, CheckCircle, FileArchive, RefreshCw } from 'lucide-react'
 
-// IMPORTANDO A AUTENTICAÇÃO DO GOOGLE (Certifique-se que o arquivo firebase.js está na mesma pasta)
+// FIREBASE
 import { auth, loginComGoogle, sairDaConta } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 
 const API_URL = 'https://taxxml-api.onrender.com'
 
 function App() {
-  // Estados de Autenticação
   const [usuario, setUsuario] = useState(null)
-  const [isAdmin, setIsAdmin] = useState(false) // Controle do Bypass de Pagamento
+  const [isAdmin, setIsAdmin] = useState(false) 
 
   const [view, setView] = useState('login')
   const [loading, setLoading] = useState(false)
@@ -22,6 +21,11 @@ function App() {
   const [payId, setPayId] = useState(null)
   const [rastreio, setRastreio] = useState('')
 
+  // Campos do Login Tradicional
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [nome, setNome] = useState('')
+
   const [downloadFinished, setDownloadFinished] = useState(false)
   const [adminStats, setAdminStats] = useState({ total_xmls: 0, faturamento: 0, clientes_ativos: 0 })
   const [progress, setProgress] = useState({ ativo: false, processados: 0, total: 0 })
@@ -31,16 +35,13 @@ function App() {
   const totalPrice = (total * 0.15).toFixed(2)
   const MAX_CHAVES = 5000 
 
-  // Observador do Firebase (Mantém o usuário logado mesmo dando F5)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUsuario(user);
+      // Se logou pelo Google
       if (user) {
+        setUsuario(user);
         setView('customer');
-      } else {
-        setView('login');
-        setIsAdmin(false); // Remove os poderes de admin se sair da conta
-      }
+      } 
     });
     return () => unsubscribe();
   }, []);
@@ -56,25 +57,63 @@ function App() {
     setProgress({ ativo: false, processados: 0, total: 0 })
   }
 
-  // --- FUNÇÃO DO NOVO LOGIN ---
+  // --- LOGIN TRADICIONAL (VIA BACKEND) ---
+  const fazerLoginTradicional = async () => {
+    if (!email || !senha) return alert("Preencha todos os campos!")
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) })
+      const data = await res.json()
+      if (data.sucesso) { 
+        // Cria um usuário falso para o sistema reconhecer e mostrar no cabeçalho
+        setUsuario({ email: email, displayName: email.split('@')[0] })
+        setView('customer'); 
+        setEmail(''); 
+        setSenha(''); 
+      } else { alert(data.erro) }
+    } catch (e) { alert("Erro de conexão com o servidor.") }
+    setLoading(false)
+  }
+
+  const criarConta = async () => {
+    if (!nome || !email || !senha) return alert("Preencha todos!")
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/registrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha }) })
+      const data = await res.json()
+      if (data.sucesso) { 
+        alert("Conta criada com sucesso!"); 
+        setView('login'); 
+        setNome(''); 
+        setEmail(''); 
+        setSenha(''); 
+      } else { alert(data.erro) }
+    } catch (e) { alert("Erro de conexão.") }
+    setLoading(false)
+  }
+
+  // --- LOGIN PELO GOOGLE ---
   const handleGoogleLogin = async () => {
     setLoading(true)
     const user = await loginComGoogle()
     if (!user) {
-      alert("Falha ao entrar com o Google.")
+      alert("Falha ao entrar com o Google. Verifique se o domínio está autorizado no Firebase.")
     }
     setLoading(false)
   }
 
   const handleLogout = async () => {
     await sairDaConta()
+    setUsuario(null)
+    setIsAdmin(false)
+    setView('login')
   }
 
-  // --- O SEU ACESSO MESTRE ---
+  // --- ACESSO MESTRE ADMIN ---
   const acessarAdmin = async () => {
     const s = prompt("Senha Mestre do Sistema:")
     if (s === "123456Mat") {
-      setIsAdmin(true) // Liga o Bypass de pagamento
+      setIsAdmin(true)
       try {
         const res = await fetch(`${API_URL}/api/admin/stats`)
         setAdminStats(await res.json())
@@ -93,8 +132,7 @@ function App() {
     setLoading(true); setQrBase64(''); setCheckoutUrl(''); setIsPaid(false); setDownloadFinished(false);
     const rota = tipo === 'pix' ? '/api/pagar-pix' : '/api/pagar-cartao'
     try {
-      // Como o usuário está logado, enviamos o email dele para o backend registrar a compra
-      const bodyData = { quantidade: total, email: usuario?.email || 'desconhecido' }
+      const bodyData = { quantidade: total, email: usuario?.email || email || 'desconhecido' }
       const res = await fetch(`${API_URL}${rota}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData) })
       const data = await res.json()
       if (data.qr_code_base64) { setQrBase64(data.qr_code_base64); setPayId(data.payment_id); }
@@ -109,7 +147,7 @@ function App() {
       const url = tipo === 'pix' ? `/api/status-pix/${payId}` : `/api/status-cartao/${rastreio}`;
       const res = await fetch(`${API_URL}${url}`);
       const data = await res.json();
-      if (data.pago) { setIsPaid(true); } else { alert("Pagamento ainda não detectado. Tente novamente em 10 segundos."); }
+      if (data.pago) { setIsPaid(true); } else { alert("Pagamento ainda não detectado. Tente novamente."); }
     } catch (e) { alert("Erro de consulta."); }
     setLoading(false);
   };
@@ -148,29 +186,64 @@ function App() {
     }
   };
 
-  // --- TELA DE LOGIN (NOVA) ---
+  // --- TELA DE LOGIN ---
   if (view === 'login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
-        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border text-center">
-          <div className="flex justify-center mb-6">
-            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-56 object-contain" onError={(e) => { e.target.style.display='none' }} />
+        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
+          <div className="flex justify-center mb-2">
+            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-64 object-contain" onError={(e) => { e.target.style.display='none' }} />
           </div>
           
-          <h2 className="text-2xl font-black text-slate-800 mb-2">Acesso ao Sistema</h2>
-          <p className="text-slate-500 mb-8 font-medium">Faça login com sua conta Google para continuar</p>
+          <h2 className="text-2xl font-black text-center text-slate-800 mb-1">Acesso ao Sistema</h2>
+          <p className="text-slate-500 text-center mb-6 font-medium">Faça login para continuar</p>
           
-          <button onClick={handleGoogleLogin} disabled={loading} className="w-full py-4 bg-[#4285F4] text-white font-bold rounded-xl hover:bg-[#3367D6] transition-all flex justify-center items-center gap-3 shadow-md">
-            {loading ? <Loader2 className="animate-spin" /> : (
-              <>
-                <div className="bg-white p-1 rounded-full"><img src="https://img.icons8.com/color/24/google-logo.png" alt="Google" /></div>
-                Entrar com o Google
-              </>
-            )}
-          </button>
+          <div className="space-y-4">
+            <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500" />
+            <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500" />
+            <button onClick={fazerLoginTradicional} disabled={loading} className="w-full py-4 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-all flex justify-center items-center gap-2">
+              {loading ? <Loader2 className="animate-spin" /> : <>Entrar <ArrowRight className="w-4 h-4"/></>}
+            </button>
+            
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink-0 mx-4 text-slate-400 text-sm font-medium">ou</span>
+              <div className="flex-grow border-t border-slate-200"></div>
+            </div>
 
-          <div className="flex justify-end items-center text-sm font-semibold pt-6 border-t mt-8">
-            <button onClick={acessarAdmin} className="text-slate-400 hover:text-red-500 flex items-center gap-1"><ShieldCheck className="w-4 h-4"/> Admin</button>
+            <button onClick={handleGoogleLogin} disabled={loading} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex justify-center items-center gap-3">
+              <img src="https://img.icons8.com/color/24/google-logo.png" alt="Google" />
+              Entrar com o Google
+            </button>
+
+            <div className="flex justify-between items-center text-sm font-semibold pt-4 border-t mt-4">
+              <button onClick={() => setView('register')} className="text-sky-600">Criar Conta</button>
+              <button onClick={acessarAdmin} className="text-slate-400 hover:text-red-500 flex items-center gap-1"><ShieldCheck className="w-4 h-4"/> Admin</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- TELA DE REGISTRO ---
+  if (view === 'register') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
+        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
+           <div className="flex justify-center mb-2">
+            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-48 object-contain" onError={(e) => { e.target.style.display='none' }}/>
+          </div>
+          <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Criar Conta</h2>
+          <p className="text-slate-500 text-center mb-8">Junte-se ao Tax XML</p>
+          <div className="space-y-4">
+            <input type="text" placeholder="Nome / Empresa" value={nome} onChange={e => setNome(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input type="email" placeholder="E-mail Profissional" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input type="password" placeholder="Crie uma Senha" value={senha} onChange={e => setSenha(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+            <button onClick={criarConta} disabled={loading} className="w-full py-4 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 flex justify-center items-center gap-2 mt-4">
+              {loading ? <Loader2 className="animate-spin" /> : <><UserPlus className="w-5 h-5"/> Finalizar Cadastro</>}
+            </button>
+            <div className="text-center mt-4"><button onClick={() => setView('login')} className="text-sm font-bold text-slate-500">Voltar para Login</button></div>
           </div>
         </div>
       </div>
@@ -189,7 +262,7 @@ function App() {
               <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-12 h-12 object-contain" onError={(e) => { e.target.style.display='none' }}/> 
               <div>
                 <h1 className="text-2xl font-black text-slate-800 leading-none">Tax XML</h1>
-                {usuario && <span className="text-sm font-bold text-slate-500">Olá, {usuario.displayName?.split(' ')[0]}</span>}
+                {usuario && <span className="text-sm font-bold text-slate-500">Olá, {usuario.displayName || usuario.email?.split('@')[0]}</span>}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -249,7 +322,6 @@ function App() {
                 </div>
 
               ) : isAdmin ? (
-                // MODO ADMIN: DOWNLOAD GRATUITO HABILITADO
                 <div className="space-y-4">
                   <div className="bg-sky-100 text-sky-700 p-3 rounded-xl font-bold text-center border border-sky-200">
                     👑 MODO ADMIN ATIVADO
@@ -298,7 +370,7 @@ function App() {
     )
   }
 
-  // --- DASHBOARD ADMIN DO MATHEUS ---
+  // --- DASHBOARD ADMIN ---
   if (view === 'admin') {
     return (
       <div className="min-h-screen bg-slate-900 p-8 text-white font-sans">
