@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
-import { FileText, CreditCard, QrCode, Download, Loader2, Users, BarChart3, ShieldCheck, LogOut, ArrowRight, UserPlus, CheckCircle, FlaskConical, FileArchive } from 'lucide-react'
+import { FileText, CreditCard, QrCode, Download, Loader2, Users, BarChart3, ShieldCheck, LogOut, ArrowRight, UserPlus, CheckCircle, FlaskConical, FileArchive, RefreshCw } from 'lucide-react'
+
+// LINK OFICIAL DO SEU SERVIDOR NA NUVEM (RENDER)
+const API_URL = 'https://taxxml-api.onrender.com'
 
 function App() {
   const [view, setView] = useState('login')
@@ -12,25 +15,38 @@ function App() {
   const [payId, setPayId] = useState(null)
   const [rastreio, setRastreio] = useState('')
 
+  // NOVO ESTADO: Controle de fim de download
+  const [downloadFinished, setDownloadFinished] = useState(false)
+
   const [adminStats, setAdminStats] = useState({ total_xmls: 0, faturamento: 0, clientes_ativos: 0 })
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [nome, setNome] = useState('')
 
-  // ESTADO DA BARRA DE PROGRESSO
   const [progress, setProgress] = useState({ ativo: false, processados: 0, total: 0 })
 
   const validKeys = keys.split('\n').map(k => k.trim()).filter(k => k.length === 44)
   const total = validKeys.length
   const totalPrice = (total * 0.15).toFixed(2)
-  const MAX_CHAVES = 5000 // Aumentei para o seu teste de 4.157 chaves!
+  const MAX_CHAVES = 5000 
 
-  // (FUNÇÕES DE LOGIN E ADMIN MANTIDAS IGUAIS)
+  // FUNÇÃO PARA LIMPAR TUDO E RECOMEÇAR
+  const resetarSistema = () => {
+    setKeys('')
+    setIsPaid(false)
+    setQrBase64('')
+    setCheckoutUrl('')
+    setPayId(null)
+    setRastreio('')
+    setDownloadFinished(false)
+    setProgress({ ativo: false, processados: 0, total: 0 })
+  }
+
   const fazerLogin = async () => {
     if (!email || !senha) return alert("Preencha todos os campos!")
     setLoading(true)
     try {
-      const res = await fetch('https://taxxml-api.onrender.com/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) })
+      const res = await fetch(`${API_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) })
       const data = await res.json()
       if (data.sucesso) { setView('customer'); setEmail(''); setSenha(''); } else { alert(data.erro) }
     } catch (e) { alert("Erro de conexão.") }
@@ -41,7 +57,7 @@ function App() {
     if (!nome || !email || !senha) return alert("Preencha todos!")
     setLoading(true)
     try {
-      const res = await fetch('https://taxxml-api.onrender.com/api/registrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha }) })
+      const res = await fetch(`${API_URL}/api/registrar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha }) })
       const data = await res.json()
       if (data.sucesso) { alert("Conta criada!"); setView('login'); setNome(''); setEmail(''); setSenha(''); } else { alert(data.erro) }
     } catch (e) { alert("Erro de conexão.") }
@@ -52,7 +68,7 @@ function App() {
     const s = prompt("Senha Mestre:")
     if (s === "admin123") {
       try {
-        const res = await fetch('https://taxxml-api.onrender.com/api/admin/stats')
+        const res = await fetch(`${API_URL}/api/admin/stats`)
         setAdminStats(await res.json())
         setView('admin')
       } catch (e) { alert("Erro ao buscar dados.") }
@@ -61,10 +77,10 @@ function App() {
 
   const handlePagamento = async (tipo) => {
     if (total === 0 || total > MAX_CHAVES) return alert("Erro na quantidade de chaves.")
-    setLoading(true); setQrBase64(''); setCheckoutUrl(''); setIsPaid(false);
+    setLoading(true); setQrBase64(''); setCheckoutUrl(''); setIsPaid(false); setDownloadFinished(false);
     const rota = tipo === 'pix' ? '/api/pagar-pix' : '/api/pagar-cartao'
     try {
-      const res = await fetch(`https://taxxml-api.onrender.com${rota}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quantidade: total }) })
+      const res = await fetch(`${API_URL}${rota}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quantidade: total }) })
       const data = await res.json()
       if (data.qr_code_base64) { setQrBase64(data.qr_code_base64); setPayId(data.payment_id); }
       if (data.checkout_url) { setCheckoutUrl(data.checkout_url); setRastreio(data.rastreio); }
@@ -76,51 +92,41 @@ function App() {
     setLoading(true);
     try {
       const url = tipo === 'pix' ? `/api/status-pix/${payId}` : `/api/status-cartao/${rastreio}`;
-      const res = await fetch(`https://taxxml-api.onrender.com${url}`);
+      const res = await fetch(`${API_URL}${url}`);
       const data = await res.json();
       if (data.pago) { setIsPaid(true); } else { alert("Pagamento ainda não detectado."); }
     } catch (e) { alert("Erro de consulta."); }
     setLoading(false);
   };
 
-  // ==========================================
-  // O NOVO DOWNLOAD COM BARRA DE PROGRESSO
-  // ==========================================
   const baixarLote = async () => {
     if (total === 0 || total > MAX_CHAVES) return alert("Erro na quantidade de chaves.")
-
     setProgress({ ativo: true, processados: 0, total: total })
     
     try {
-      // 1. Avisa o Python para começar e pega a "senha da fila" (task_id)
-      const resStart = await fetch('https://taxxml-api.onrender.com/api/iniciar-download', {
+      const resStart = await fetch(`${API_URL}/api/iniciar-download`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chaves: validKeys })
       });
       const { task_id } = await resStart.json();
 
-      // 2. Fica perguntando de 2 em 2 segundos como está o progresso
       const checkInterval = setInterval(async () => {
-        const resProg = await fetch(`https://taxxml-api.onrender.com/api/progresso/${task_id}`);
+        const resProg = await fetch(`${API_URL}/api/progresso/${task_id}`);
         const dataProg = await resProg.json();
         
-        // Atualiza a barra na tela
         setProgress({ ativo: true, processados: dataProg.processados, total: dataProg.total });
 
-        // 3. Quando o Python avisa que terminou...
         if (dataProg.concluido) {
-          clearInterval(checkInterval); // Para de perguntar
+          clearInterval(checkInterval); 
+          window.location.href = `${API_URL}/api/baixar-zip/${task_id}`;
           
-          // Baixa o ZIP físico
-          window.location.href = `https://taxxml-api.onrender.com/api/baixar-zip/${task_id}`;
-          
-          // Reseta a tela
+          // Muda para a tela de SUCESSO após 2 segundos
           setTimeout(() => {
             setProgress({ ativo: false, processados: 0, total: 0 });
-            setIsPaid(false); setQrBase64(''); setCheckoutUrl('');
-          }, 3000);
+            setDownloadFinished(true); 
+          }, 2000);
         }
-      }, 2000); // 2000ms = 2 segundos
+      }, 2000); 
 
     } catch (e) { 
       alert("Erro ao iniciar download."); 
@@ -128,13 +134,14 @@ function App() {
     }
   };
 
-  // (TELAS LOGIN, REGISTRO, ADMIN MANTIDAS...)
+  // --- TELAS ---
   if (view === 'login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
           <div className="flex justify-center mb-6"><div className="bg-blue-600 p-3 rounded-2xl shadow-lg"><FileText className="text-white w-8 h-8" /></div></div>
-          <h2 className="text-2xl font-black text-center text-slate-800 mb-8">Tax XML Pro</h2>
+          <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Moraes Assessoria</h2>
+          <p className="text-slate-500 text-center mb-8 font-medium">Recuperação e Gestão de XML</p>
           <div className="space-y-4">
             <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" />
             <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" />
@@ -156,7 +163,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
           <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Criar Conta</h2>
-          <p className="text-slate-500 text-center mb-8">Junte-se ao sistema</p>
+          <p className="text-slate-500 text-center mb-8">Junte-se à Moraes Assessoria</p>
           <div className="space-y-4">
             <input type="text" placeholder="Nome / Empresa" value={nome} onChange={e => setNome(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
             <input type="email" placeholder="E-mail Profissional" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
@@ -172,7 +179,6 @@ function App() {
   }
 
   if (view === 'customer') {
-    // Calculo da porcentagem da barra
     const porcentagem = progress.total > 0 ? Math.round((progress.processados / progress.total) * 100) : 0;
 
     return (
@@ -189,7 +195,7 @@ function App() {
               <textarea 
                 className={`w-full h-72 p-5 bg-slate-50 border rounded-2xl outline-none focus:ring-2 ${total > MAX_CHAVES ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'} font-mono text-sm`} 
                 placeholder="Cole as chaves..." 
-                value={keys} onChange={e => setKeys(e.target.value)} disabled={isPaid || progress.ativo} 
+                value={keys} onChange={e => setKeys(e.target.value)} disabled={isPaid || progress.ativo || downloadFinished} 
               />
               <div className={`mt-4 p-4 rounded-xl font-bold flex justify-between ${total > MAX_CHAVES ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-blue-50 text-blue-700'}`}>
                 <span>{total} chaves identificadas</span>
@@ -200,27 +206,33 @@ function App() {
             <div className="bg-white p-8 rounded-3xl shadow-sm border h-fit">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><CreditCard className="text-emerald-600"/> 2. Checkout</h2>
               
-              {/* O NOVO PAINEL DE PROGRESSO VISUAL */}
-              {progress.ativo ? (
+              {/* TELA DE SUCESSO FINAL */}
+              {downloadFinished ? (
+                <div className="text-center space-y-6">
+                  <div className="bg-emerald-50 text-emerald-700 p-6 rounded-2xl flex flex-col items-center gap-3 border border-emerald-200 shadow-sm">
+                    <CheckCircle className="w-16 h-16 text-emerald-500" />
+                    <h3 className="text-xl font-black">Download Concluído!</h3>
+                    <p className="text-sm font-medium">Seu arquivo ZIP foi baixado com sucesso.</p>
+                  </div>
+                  <button onClick={resetarSistema} className="w-full py-4 rounded-xl font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 shadow-sm flex justify-center items-center gap-2 transition-all">
+                    <RefreshCw className="w-5 h-5"/> Limpar e Começar Novo Lote
+                  </button>
+                </div>
+
+              // BARRA DE PROGRESSO
+              ) : progress.ativo ? (
                 <div className="space-y-4">
                   <div className="flex justify-between items-end mb-2">
                     <span className="font-bold text-slate-700 flex items-center gap-2"><FileArchive className="w-5 h-5 text-blue-600 animate-pulse"/> Baixando XMLs...</span>
                     <span className="text-2xl font-black text-blue-600">{porcentagem}%</span>
                   </div>
-                  
-                  {/* A Barra de Progresso Verde/Azul */}
                   <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden shadow-inner border border-slate-200">
                     <div className="bg-blue-600 h-4 rounded-full transition-all duration-500 ease-out" style={{ width: `${porcentagem}%` }}></div>
                   </div>
-                  
-                  <p className="text-center text-sm font-semibold text-slate-500 mt-2">
-                    Processando {progress.processados} de {progress.total} notas...
-                  </p>
-                  <p className="text-center text-xs text-slate-400 mt-1 italic">
-                    Não feche esta página até o download começar.
-                  </p>
+                  <p className="text-center text-sm font-semibold text-slate-500 mt-2">Processando {progress.processados} de {progress.total} notas...</p>
                 </div>
 
+              // BOTÃO DE BAIXAR (PÓS-PAGAMENTO)
               ) : isPaid ? (
                 <div className="text-center space-y-4">
                   <div className="bg-emerald-100 text-emerald-700 p-3 rounded-xl font-bold flex justify-center items-center gap-2"><CheckCircle /> Pagamento Aprovado!</div>
@@ -228,6 +240,8 @@ function App() {
                      Baixar Lote ZIP Agora
                   </button>
                 </div>
+
+              // QR CODE DO PIX
               ) : qrBase64 ? (
                 <div className="text-center space-y-4">
                   <img src={`data:image/png;base64,${qrBase64}`} className="mx-auto rounded-xl border p-2" />
@@ -235,6 +249,8 @@ function App() {
                     {loading ? <Loader2 className="animate-spin" /> : "🔄 Já paguei o PIX"}
                   </button>
                 </div>
+
+              // LINK DO CARTÃO
               ) : checkoutUrl ? (
                 <div className="text-center space-y-4">
                   <a href={checkoutUrl} target="_blank" className="block py-4 text-center rounded-xl font-bold text-white bg-blue-600 shadow-md">💳 Abrir Mercado Pago</a>
@@ -242,6 +258,8 @@ function App() {
                     {loading ? <Loader2 className="animate-spin" /> : "🔄 Já paguei no Cartão"}
                   </button>
                 </div>
+
+              // TELA INICIAL DE CHECKOUT
               ) : (
                 <div className="space-y-4">
                   <div className="text-3xl font-black text-emerald-600 mb-6 text-center">R$ {totalPrice}</div>
@@ -261,7 +279,6 @@ function App() {
     )
   }
 
-  // (TELA ADMIN MANTIDA...)
   if (view === 'admin') {
     return (
       <div className="min-h-screen bg-slate-900 p-8 text-white font-sans">
