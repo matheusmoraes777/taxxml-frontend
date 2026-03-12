@@ -136,11 +136,12 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
-          <div className="flex justify-center mb-10">
-            {/* AQUI ENTRA A SUA LOGO BONITA (Já contém o texto "Tax XML") */}
-            <img src="/taxxml_logo.jpeg" alt="Tax XML Logo" className="w-52 object-contain" onError={(e) => { e.target.style.display='none' }} />
+          <div className="flex justify-center mb-4">
+            <img src="/logo.jpeg" alt="Tax XML Logo" className="w-32 object-contain" onError={(e) => { e.target.style.display='none' }} />
           </div>
-          {/* Removidos H2 e P redundantes */}
+          <h2 className="text-2xl font-black text-center text-slate-800 mb-1">Tax XML</h2>
+          <p className="text-sky-500 text-center mb-8 font-bold">Seu XML em Minutos</p>
+          
           <div className="space-y-4">
             <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500" />
             <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500" />
@@ -161,8 +162,8 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
-           <div className="flex justify-center mb-8">
-            <img src="/taxxml_logo.jpeg" alt="Tax XML Logo" className="w-40 object-contain" onError={(e) => { e.target.style.display='none' }}/>
+           <div className="flex justify-center mb-4">
+            <img src="/logo.jpeg" alt="Tax XML Logo" className="w-24 object-contain" onError={(e) => { e.target.style.display='none' }}/>
           </div>
           <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Criar Conta</h2>
           <p className="text-slate-500 text-center mb-8">Junte-se ao Tax XML</p>
@@ -187,9 +188,8 @@ function App() {
       <div className="min-h-screen bg-slate-50 p-8 font-sans">
         <div className="max-w-6xl mx-auto">
           <header className="flex justify-between items-center mb-10 bg-white p-6 rounded-2xl shadow-sm border">
-            {/* AQUI O NOME HTML É MANTIDO PARA COMBINAR COM O ÍCONE */}
             <h1 className="text-2xl font-black flex items-center gap-3 text-slate-800">
-              <img src="/taxxml_logo.jpeg" alt="Tax XML Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display='none' }}/> 
+              <img src="/logo.jpeg" alt="Tax XML Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display='none' }}/> 
               Tax XML
             </h1>
             <button onClick={() => setView('login')} className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold flex items-center gap-2"><LogOut className="w-4 h-4"/> Sair</button>
