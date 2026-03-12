@@ -136,12 +136,14 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
-          <div className="flex justify-center mb-4">
-            {/* LOGO LINKADA DIRETO DA NUVEM IMGBB */}
-            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-48 object-contain" onError={(e) => { e.target.style.display='none' }} />
+          <div className="flex justify-center mb-2">
+            {/* LOGO LINKADA DIRETO DA NUVEM IMGBB - Tamanho ajustado */}
+            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-64 object-contain" onError={(e) => { e.target.style.display='none' }} />
           </div>
-          <h2 className="text-2xl font-black text-center text-slate-800 mb-1">Tax XML</h2>
-          <p className="text-sky-500 text-center mb-8 font-bold">Seu XML em Minutos</p>
+          
+          {/* TEXTOS ATUALIZADOS PARA LOGIN */}
+          <h2 className="text-2xl font-black text-center text-slate-800 mb-1">Acesso ao Sistema</h2>
+          <p className="text-slate-500 text-center mb-8 font-medium">Faça login para continuar</p>
           
           <div className="space-y-4">
             <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500" />
@@ -163,9 +165,8 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border">
-           <div className="flex justify-center mb-4">
-            {/* LOGO LINKADA DIRETO DA NUVEM IMGBB */}
-            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-32 object-contain" onError={(e) => { e.target.style.display='none' }}/>
+           <div className="flex justify-center mb-2">
+            <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-48 object-contain" onError={(e) => { e.target.style.display='none' }}/>
           </div>
           <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Criar Conta</h2>
           <p className="text-slate-500 text-center mb-8">Junte-se ao Tax XML</p>
@@ -191,7 +192,6 @@ function App() {
         <div className="max-w-6xl mx-auto">
           <header className="flex justify-between items-center mb-10 bg-white p-6 rounded-2xl shadow-sm border">
             <h1 className="text-2xl font-black flex items-center gap-3 text-slate-800">
-              {/* LOGO LINKADA DIRETO DA NUVEM IMGBB */}
               <img src="https://i.ibb.co/7x0Qyqr8/taxxml-logo.jpg" alt="Tax XML Logo" className="w-10 h-10 object-contain" onError={(e) => { e.target.style.display='none' }}/> 
               Tax XML
             </h1>
