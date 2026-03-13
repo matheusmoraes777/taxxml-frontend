@@ -126,13 +126,20 @@ function App() {
       
       let errosSeguidos = 0;
 
+      // ⚡ Tempo reduzido para 1 segundo para a barra fluir mais rápida
       const checkInterval = setInterval(async () => {
         try {
           const resProg = await fetch(`${API_URL}/api/progresso/${data.task_id}`);
           if (resProg.ok) {
             errosSeguidos = 0;
             const dataProg = await resProg.json();
-            setProgress(p => ({ ...p, processados: dataProg.processados }));
+            
+            // 🛡️ A MÁGICA ESTÁ AQUI: Math.max impede que o número caia para zero!
+            setProgress(p => ({ 
+              ...p, 
+              processados: Math.max(p.processados, dataProg.processados || 0),
+              total: Math.max(p.total, dataProg.total || 0)
+            }));
             
             if (dataProg.concluido) { 
               clearInterval(checkInterval); 
@@ -147,14 +154,13 @@ function App() {
             }
           }
         } catch (error) {
-          // Ignora piscadas da internet
+          // Ignora pequenas oscilações de internet
         }
-      }, 2000); 
+      }, 1000); 
 
     } catch(e) { alert("Erro ao conectar com servidor.") }
     setLoading(false)
   }
-
   const gerarPixCredito = async (valor) => {
     if (valor < 1) return alert("Valor mínimo R$ 1,00")
     setLoading(true); setQrBase64(''); setPayId(null);
